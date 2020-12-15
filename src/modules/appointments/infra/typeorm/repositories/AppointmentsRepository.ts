@@ -18,9 +18,12 @@ class AppointmentsRepository implements IAppointmentsRepository {
     return this.ormRepository.find();
   }
 
-  public async findByDate(date: Date): Promise<Appointment | undefined> {
+  public async findByDate(
+    date: Date,
+    provider_id: string,
+  ): Promise<Appointment | undefined> {
     const findAppointment = await this.ormRepository.findOne({
-      where: { date },
+      where: { date, provider_id },
     });
 
     return findAppointment;
@@ -40,6 +43,24 @@ class AppointmentsRepository implements IAppointmentsRepository {
 
   public async findAllInMonthFromProvider({
     provider_id,
+    month,
+    year,
+  }: IFindAllInMonthFromProviderDTO): Promise<Appointment[]> {
+    const parsedMonth = String(month).padStart(2, '0');
+    const appointments = await this.ormRepository.find({
+      where: {
+        provider_id,
+        date: Raw(
+          dateFieldName =>
+            `to_char(${dateFieldName}, 'MM-YYYY') = '${parsedMonth}-${year}'`,
+        ),
+      },
+    });
+    return appointments;
+  }
+
+  public async findAllInDayFromProvider({
+    provider_id,
     day,
     month,
     year,
@@ -54,24 +75,7 @@ class AppointmentsRepository implements IAppointmentsRepository {
             `to_char(${dateFieldName}, 'DD-MM-YYYY') = '${parsedDay}-${parsedMonth}-${year}'`,
         ),
       },
-    });
-    return appointments;
-  }
-
-  public async findAllInDayFromProvider({
-    provider_id,
-    month,
-    year,
-  }: IFindAllInMonthFromProviderDTO): Promise<Appointment[]> {
-    const parsedMonth = String(month).padStart(2, '0');
-    const appointments = await this.ormRepository.find({
-      where: {
-        provider_id,
-        date: Raw(
-          dateFieldName =>
-            `to_char(${dateFieldName}, 'MM-YYYY') = '${parsedMonth}-${year}'`,
-        ),
-      },
+      relations: ['user'],
     });
     return appointments;
   }
